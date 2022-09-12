@@ -295,7 +295,7 @@ class FFTPower(FFTBase):
             kedges, kcoords = _find_unique_edges(y3d.x, 2 * numpy.pi / y3d.BoxSize, kmax, y3d.pm.comm)
 
         # project on to the desired basis
-        muedges = numpy.linspace(-1, 1, self.attrs['Nmu']+1, endpoint=True)
+        muedges = numpy.linspace(0, 1, self.attrs['Nmu']+1, endpoint=True)
         edges = [kedges, muedges]
         coords = [kcoords, None]
         result, pole_result = project_to_basis(y3d, edges,
