@@ -22,8 +22,11 @@ class FFTBase(object):
         the number of cells per mesh size
     BoxSize : 3-vector
         the size of the box
+    kcut: float, None
+        In 3D power spectrum set the power for  k_z < kcut['k_par_min'] to
+        kcut['func'](k_z)
     """
-    def __init__(self, first, second, Nmesh, BoxSize):
+    def __init__(self, first, second, Nmesh, BoxSize, kcut=None):
         from pmesh.pm import ParticleMesh
 
         first = _cast_source(first, Nmesh=Nmesh, BoxSize=BoxSize)
@@ -34,6 +37,8 @@ class FFTBase(object):
 
         self.first = first
         self.second = second
+
+        self.kcut = kcut
 
         # grab comm from first source
         self.comm = first.comm
@@ -103,6 +108,11 @@ class FFTBase(object):
         attrs.update(self.attrs)
 
         c1 = first.compute(mode='complex', Nmesh=self.attrs['Nmesh'])
+        ## Added by Mahdi for Line Intensity Map  application
+        ## Removing large modes due to the foregrounds
+        if self.kcut is not None:
+            ind = numpy.where(c1.x[2][0,0,:] <= self.kcut['k_par_min'])
+            c1[:,:,ind[0]] *= self.kcut['func'](c1.x[2][0,0,ind[0]])
 
         # compute the auto power of single supplied field
         if first is second:
@@ -137,7 +147,6 @@ class FFTBase(object):
             if 'shotnoise' in c1.attrs:
                 Pshot = c1.attrs['shotnoise']
         attrs['shotnoise'] = Pshot
-
 
         return p3d, attrs
 
@@ -191,7 +200,7 @@ class FFTPower(FFTBase):
     logger = logging.getLogger('FFTPower')
 
     def __init__(self, first, mode, Nmesh=None, BoxSize=None, second=None,
-                    los=[0, 0, 1], Nmu=5, dk=None, kmin=0., kmax=None, poles=[]):
+                    los=[0, 0, 1], Nmu=5, dk=None, kmin=0., kmax=None, poles=[], kcut=None):
 
         # mode is either '1d' or '2d'
         if mode not in ['1d', '2d']:
@@ -206,7 +215,7 @@ class FFTPower(FFTBase):
         if not numpy.allclose(numpy.einsum('i,i', los, los), 1.0, rtol=1e-5):
             raise ValueError("line-of-sight ``los`` must be a unit vector")
 
-        FFTBase.__init__(self, first, second, Nmesh, BoxSize)
+        FFTBase.__init__(self, first, second, Nmesh, BoxSize, kcut)
 
         # save meta-data
         self.attrs['mode'] = mode
