@@ -200,11 +200,14 @@ class FFTPower(FFTBase):
     logger = logging.getLogger('FFTPower')
 
     def __init__(self, first, mode, Nmesh=None, BoxSize=None, second=None,
-                    los=[0, 0, 1], Nmu=5, dk=None, kmin=0., kmax=None, poles=[], kcut=None):
+                    los=[0, 0, 1], Nmu=5, dk=None, kmin=0., kmax=None, poles=[], kcut=None, 
+                    save_3d_power=False):
 
         # mode is either '1d' or '2d'
         if mode not in ['1d', '2d']:
             raise ValueError("`mode` should be either '1d' or '2d'")
+        self.save_3d_power = save_3d_power
+        self.pk3d = None
 
         if poles is None:
             poles = []
@@ -288,6 +291,8 @@ class FFTPower(FFTBase):
 
         # measure the 3D power (y3d is a ComplexField)
         y3d, attrs = self._compute_3d_power(self.first, self.second)
+        if self.save_3d_power:
+            self.pk3d = y3d
 
         # binning in k out to the minimum nyquist frequency
         # (accounting for possibly anisotropic box)
