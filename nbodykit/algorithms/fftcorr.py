@@ -54,6 +54,9 @@ class FFTCorr(FFTBase):
         the lower edge of the first ``r`` bin to use
     rmax : float, optional
         the upper limit of the last ``r`` bin to use
+    edges: list of array_like, optional
+        a list of arrays that define the bin edges for r. This is an alternative to
+        specifying ``dr``, ``rmin``, and ``rmax``.
     poles : list of int, optional
         a list of multipole numbers ``ell`` to compute :math:`\xi_\ell(r)`
         from :math:`\xi(r,\mu)`
@@ -61,7 +64,7 @@ class FFTCorr(FFTBase):
     logger = logging.getLogger('FFTCorr')
 
     def __init__(self, first, mode, Nmesh=None, BoxSize=None, second=None,
-                    los=[0, 0, 1], Nmu=5, dr=None, rmin=0., rmax=None, poles=[]):
+                    los=[0, 0, 1], Nmu=5, dr=None, rmin=0., rmax=None, edges=None, poles=[]):
 
         # mode is either '1d' or '2d'
         if mode not in ['1d', '2d']:
@@ -84,13 +87,15 @@ class FFTCorr(FFTBase):
         self.attrs['Nmu'] = Nmu
         self.attrs['poles'] = poles
 
-        if dr is None:
-            dr = self.attrs['BoxSize'].min() / self.attrs['Nmesh'].max()
-
-        self.attrs['dr'] = dr
-        self.attrs['rmin'] = rmin
-        self.attrs['rmax'] = rmax
-
+        if edges is None:
+            if dr is None:
+                dr = self.attrs['BoxSize'].min() / self.attrs['Nmesh'].max()        
+            self.attrs['dr'] = dr
+            self.attrs['rmin'] = rmin
+            self.attrs['rmax'] = rmax
+        else:
+            self.attrs['edges'] = edges
+        
         self.corr, self.poles = self.run()
 
         # compatability
@@ -156,19 +161,23 @@ class FFTCorr(FFTBase):
         # correlation is dimensionless
         # Note that L^3 cancels with dk^3.
         y3d[...] *= 1.0 / y3d.BoxSize.prod()
-
-        # binning in k out to the minimum nyquist frequency
-        # (accounting for possibly anisotropic box)
-        dr = self.attrs['dr']
-        rmin = self.attrs['rmin']
-        rmax = self.attrs['rmax']
-        if rmax is None:
-            rmax = 0.5 * y3d.BoxSize.min() + dr/2
-        if dr > 0:
-            redges = numpy.arange(rmin, rmax, dr)
-            rcenters = None
+        if 'rmax' in self.attrs.keys():
+            # binning in k out to the minimum nyquist frequency
+            # (accounting for possibly anisotropic box)
+            dr = self.attrs['dr']
+            rmin = self.attrs['rmin']
+            rmax = self.attrs['rmax']
+            if rmax is None:
+                rmax = 0.5 * y3d.BoxSize.min() + dr/2
+            if dr > 0:
+                redges = numpy.arange(rmin, rmax, dr)
+                rcenters = None
+            else:
+                redges, rcenters = _find_unique_edges(y3d.x, y3d.BoxSize / y3d.Nmesh, rmax, self.comm)
         else:
-            redges, rcenters = _find_unique_edges(y3d.x, y3d.BoxSize / y3d.Nmesh, rmax, self.comm)
+            assert numpy.max(self.attrs['edges']) <= 0.5 * y3d.BoxSize.min() + dr/2, "edges exceed Nyquist frequency"
+            redges = self.attrs['edges']
+            rcenters = None
 
 
         # project on to the desired basis
