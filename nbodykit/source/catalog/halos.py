@@ -252,8 +252,21 @@ class HaloCatalog(CatalogSource):
 
         # handle builtin model types
         if isinstance(model, (type, HODModel)) and issubclass(model, HODModel):
-            model = model.to_halotools(self.cosmo, self.attrs['redshift'],
-                                        self.attrs['mdef'], concentration_key='halo_nfw_conc')
+            if 'prop_key' in params:
+                prop_key = params.pop('prop_key')
+                try:
+                    prop_file = params.pop('prop_file')
+                except KeyError:
+                    raise ValueError("prop_file must be specified when prop_key is specified")
+            else:
+                prop_key = None
+                prop_file = None
+            model = model.to_halotools(self.cosmo, 
+                                       self.attrs['redshift'],
+                                       self.attrs['mdef'], 
+                                       concentration_key='halo_nfw_conc',
+                                       prop_key=prop_key,
+                                       prop_file=prop_file,)
 
         # check model type
         if not isinstance(model, ModelFactory):

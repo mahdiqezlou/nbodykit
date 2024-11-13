@@ -198,6 +198,6 @@ def HODModelFactory(name, func_name):
 Leauthaud11Model = HODModelFactory('leauthaud11', 'Leauthaud11Model')
 Hearin15Model    = HODModelFactory('hearin15', 'Hearin15Model')
 HmqModel         = HODModelFactory('alam20', 'Alam20Model')
-Hadzhiyska22Model = HODModelFactory('hadzhiyska23', 'Hadzhiyska23Model')
+Hadzhiyska23Model = HODModelFactory('hadzhiyska23', 'Hadzhiyska23Model')
 
 #__all__ = ['Zheng07Model', 'Leauthaud11Model', 'Hearin15Model', 'Alam20Model', 'Hadzhiyska23Model']
